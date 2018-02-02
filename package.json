@@ -1,10 +1,9 @@
 {
   "name": "create-react-component",
   "version": "0.0.1",
-  "keywords": [
-    "react"
-  ],
-  "description": "Create React component development environments with no build configuration.",
+  "keywords": ["react"],
+  "description":
+    "Create React component development environments with no build configuration.",
   "repository": "wuweiweiwu/create-react-component",
   "license": "MIT",
   "engines": {
@@ -13,10 +12,7 @@
   "bugs": {
     "url": "https://github.com/facebook/create-react-component/issues"
   },
-  "files": [
-    "index.js",
-    "createReactApp.js"
-  ],
+  "files": ["index.js", "createReactApp.js"],
   "bin": {
     "create-react-component": "./index.js"
   },
@@ -27,9 +23,11 @@
     "envinfo": "3.4.2",
     "fs-extra": "^5.0.0",
     "hyperquest": "^2.1.2",
+    "request": "^2.83.0",
     "semver": "^5.0.3",
     "tar-pack": "^3.4.0",
     "tmp": "0.0.33",
+    "unzip-stream": "^0.3.0",
     "validate-npm-package-name": "^3.0.0"
   }
 }

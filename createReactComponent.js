@@ -1,4 +1,4 @@
-// link https://raw.githubusercontent.com/wuweiweiwu/create-react-component/master/create-react-component-core.zip
+// link https://raw.githubusercontent.com/wuweiweiwu/create-react-component/master/core.zip
 
 'use strict';
 
@@ -17,6 +17,7 @@ const url = require('url');
 const hyperquest = require('hyperquest');
 const envinfo = require('envinfo');
 const os = require('os');
+const request = require('request');
 
 const packageJson = require('./package.json');
 
@@ -77,11 +78,52 @@ const devDependencies = [
   'webpack',
   'webpack-dev-server',
   'webpack-node-externals',
+  'react',
+  'react-dom',
 ];
 
-const peerDependencies = ['react', 'react-dom'];
+// const peerDependencies = ['react', 'react-dom'];
 
 const dependencies = ['prop-types'];
+
+const jest = {
+  setupTestFrameworkScriptFile: './node_modules/jest-enzyme/lib/index.js',
+  setupFiles: ['./test-config/shim.js', './test-config/test-setup.js'],
+  moduleFileExtensions: ['js', 'jsx', 'json'],
+  moduleDirectories: ['node_modules'],
+  moduleNameMapper: {
+    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
+      '<rootDir>/__mocks__/fileMock.js',
+    '\\.(css|scss|less)$': 'identity-obj-proxy',
+  },
+};
+
+const scripts = {
+  build:
+    'npm run clean && cross-env NODE_ENV=production TARGET=umd webpack --bail',
+  'build:demo':
+    'npm run clean:demo && cross-env NODE_ENV=production TARGET=demo webpack --bail && npm run build-storybook',
+  clean: 'rimraf dist',
+  'clean:demo': 'rimraf build',
+  start:
+    'cross-env NODE_ENV=development TARGET=development webpack-dev-server --inline --hot',
+  lint: 'eslint src examples',
+  prettier:
+    'prettier --single-quote --trailing-comma es5 --write "{src,examples}/**/*.{js,scss}"',
+  prepublishOnly: 'npm run lint && npm run test && npm run build',
+  test: 'jest',
+  'test:watch': 'jest --watchAll',
+  'test:coverage':
+    'jest --coverage && ./cc-test-reporter after-build --id="YOUR_REPORTER_ID_HERE"',
+  deploy: 'npm run build:demo && gh-pages -d build',
+  storybook:
+    'cross-env TARGET=development start-storybook -p ${PORT:-3001} -h 0.0.0.0',
+  'build-storybook':
+    'cross-env NODE_ENV=production TARGET=demo build-storybook -o build/storybook',
+};
+
+const coreUrl =
+  'https://raw.githubusercontent.com/wuweiweiwu/create-react-component/master/core.zip';
 
 let projectName;
 
@@ -203,54 +245,105 @@ function createApp(name, verbose, version, useNpm, template) {
   );
   console.log();
 
-  const packageJson = {
-    name: appName,
-    version: '0.0.1',
-    private: true,
-  };
-  fs.writeFileSync(
-    path.join(root, 'package.json'),
-    JSON.stringify(packageJson, null, 2) + os.EOL
-  );
+  // unzip stuff here
+  const unzip = require('unzip-stream');
+  // const mv = require('mv');
+  console.log('Unzipping core files');
+  request(coreUrl)
+    .pipe(unzip.Extract({ path: root }))
+    .on('close', function() {
+      // console.log('Moving core files');
+      // const dirs = [
+      //   '.npmignore',
+      //   '.babelrc',
+      //   '__mocks__',
+      //   '.eslintrc',
+      //   'webpack.config.js',
+      //   '.storybook',
+      //   '.gitignore',
+      //   'examples',
+      //   '.prettierrc',
+      //   'test-config',
+      //   'travis.yml',
+      //   'codeclimate.yml',
+      //   'src',
+      // ];
+      // dirs.forEach(dir =>
+      //   mv(
+      //     root + '/create-react-component-core/' + dir,
+      //     root + '/' + dir,
+      //     {
+      //       mkdirp: true,
+      //     },
+      //     () => {}
+      //   )
+      // );
 
-  const useYarn = useNpm ? false : shouldUseYarn();
-  const originalDirectory = process.cwd();
-  process.chdir(root);
-  if (!useYarn && !checkThatNpmCanReadCwd()) {
-    process.exit(1);
-  }
+      const packageJson = {
+        name: appName,
+        version: '0.0.1',
+        private: true,
+        main: 'dist/main.js',
+        files: ['dist'],
+        scripts,
+        jest,
+        peerDependencies: {
+          react: '^15.3.0 || ^16.0.0',
+          'react-dom': '^15.3.0 || ^16.0.0',
+        },
+      };
+      fs.writeFileSync(
+        path.join(root, 'package.json'),
+        JSON.stringify(packageJson, null, 2) + os.EOL
+      );
 
-  if (!semver.satisfies(process.version, '>=6.0.0')) {
-    console.log(
-      chalk.yellow(
-        `You are using Node ${
-          process.version
-        } so the project will be bootstrapped with an old unsupported version of tools.\n\n` +
-          `Please update to Node 6 or higher for a better, fully supported experience.\n`
-      )
-    );
-    // Fall back to latest supported react-scripts on Node 4
-    version = 'react-scripts@0.9.x';
-  }
+      const useYarn = useNpm ? false : shouldUseYarn();
+      const originalDirectory = process.cwd();
+      process.chdir(root);
+      if (!useYarn && !checkThatNpmCanReadCwd()) {
+        process.exit(1);
+      }
 
-  if (!useYarn) {
-    const npmInfo = checkNpmVersion();
-    if (!npmInfo.hasMinNpm) {
-      if (npmInfo.npmVersion) {
+      if (!semver.satisfies(process.version, '>=6.0.0')) {
         console.log(
           chalk.yellow(
-            `You are using npm ${
-              npmInfo.npmVersion
-            } so the project will be boostrapped with an old unsupported version of tools.\n\n` +
-              `Please update to npm 3 or higher for a better, fully supported experience.\n`
+            `You are using Node ${
+              process.version
+            } so the project will be bootstrapped with an old unsupported version of tools.\n\n` +
+              `Please update to Node 6 or higher for a better, fully supported experience.\n`
           )
         );
+        // Fall back to latest supported react-scripts on Node 4
+        version = 'react-scripts@0.9.x';
       }
-      // Fall back to latest supported react-scripts for npm 3
-      version = 'react-scripts@0.9.x';
-    }
-  }
-  run(root, appName, version, verbose, originalDirectory, template, useYarn);
+
+      if (!useYarn) {
+        const npmInfo = checkNpmVersion();
+        if (!npmInfo.hasMinNpm) {
+          if (npmInfo.npmVersion) {
+            console.log(
+              chalk.yellow(
+                `You are using npm ${
+                  npmInfo.npmVersion
+                } so the project will be boostrapped with an old unsupported version of tools.\n\n` +
+                  `Please update to npm 3 or higher for a better, fully supported experience.\n`
+              )
+            );
+          }
+          // Fall back to latest supported react-scripts for npm 3
+          version = 'react-scripts@0.9.x';
+        }
+      }
+      run(
+        root,
+        appName,
+        version,
+        verbose,
+        originalDirectory,
+        template,
+        useYarn
+      );
+    });
 }
 
 function shouldUseYarn() {
@@ -267,7 +360,6 @@ function install(
   useYarn,
   dependencies,
   devDependencies,
-  peerDependencies,
   verbose,
   isOnline
 ) {
@@ -275,20 +367,20 @@ function install(
     let command;
     let args;
     let args_dev;
-    let args_peer;
+    // let args_peer;
     if (useYarn) {
       command = 'yarnpkg';
       args = ['add'];
       args_dev = ['add', '--dev'];
-      args_peer = ['add', '--peer'];
+      // args_peer = ['add', '--peer'];
       if (!isOnline) {
         args.push('--offline');
         args_dev.push('--offline');
-        args_peer.push('--offline');
+        // args_peer.push('--offline');
       }
       [].push.apply(args, dependencies);
       [].push.apply(args_dev, devDependencies);
-      [].push.apply(args_peer, peerDependencies);
+      // [].push.apply(args_peer, peerDependencies);
 
       // Explicitly set cwd() to work around issues like
       // https://github.com/facebook/create-react-app/issues/3326.
@@ -299,8 +391,8 @@ function install(
       args.push(root);
       args_dev.push('--cwd');
       args_dev.push(root);
-      args_peer.push('--cwd');
-      args_peer.push(root);
+      // args_peer.push('--cwd');
+      // args_peer.push(root);
 
       if (!isOnline) {
         console.log(chalk.yellow('You appear to be offline.'));
@@ -311,9 +403,9 @@ function install(
     } else {
       command = 'npm';
       args = ['install', '--save', '--loglevel', 'error'].concat(dependencies);
-      args_peer = ['install', '--save', '--loglevel', 'error'].concat(
-        peerDependencies
-      );
+      // args_peer = ['install', '--save', '--loglevel', 'error'].concat(
+      //   peerDependencies
+      // );
       args_dev = ['install', '--save-dev', '--loglevel', 'error'].concat(
         devDependencies
       );
@@ -332,24 +424,15 @@ function install(
         });
         return;
       }
-      const child2 = spawn(command, args_peer, { stdio: 'inherit' });
+      const child2 = spawn(command, args_dev, { stdio: 'inherit' });
       child2.on('close', code2 => {
         if (code2 !== 0) {
           reject({
-            command: `${command} ${args_peer.join(' ')}`,
+            command: `${command} ${args_dev.join(' ')}`,
           });
           return;
         }
-        const child3 = spawn(command, args_dev, { stdio: 'inherit' });
-        child3.on('close', code3 => {
-          if (code3 !== 0) {
-            reject({
-              command: `${command} ${args_dev.join(' ')}`,
-            });
-            return;
-          }
-          resolve();
-        });
+        resolve();
       });
     });
   });
@@ -412,11 +495,13 @@ function run(
         useYarn,
         dependencies,
         devDependencies,
-        peerDependencies,
         verbose,
         isOnline
       );
     })
+    // .then(() => {
+    //   unpackCore();
+    // })
     .catch(reason => {
       console.log();
       console.log('Aborting installation.');
@@ -513,59 +598,59 @@ function extractStream(stream, dest) {
 }
 
 // Extract package name from tarball url or path.
-function getPackageName(installPackage) {
-  if (installPackage.match(/^.+\.(tgz|tar\.gz)$/)) {
-    return getTemporaryDirectory()
-      .then(obj => {
-        let stream;
-        if (/^http/.test(installPackage)) {
-          stream = hyperquest(installPackage);
-        } else {
-          stream = fs.createReadStream(installPackage);
-        }
-        return extractStream(stream, obj.tmpdir).then(() => obj);
-      })
-      .then(obj => {
-        const packageName = require(path.join(obj.tmpdir, 'package.json')).name;
-        obj.cleanup();
-        return packageName;
-      })
-      .catch(err => {
-        // The package name could be with or without semver version, e.g. react-scripts-0.2.0-alpha.1.tgz
-        // However, this function returns package name only without semver version.
-        console.log(
-          `Could not extract the package name from the archive: ${err.message}`
-        );
-        const assumedProjectName = installPackage.match(
-          /^.+\/(.+?)(?:-\d+.+)?\.(tgz|tar\.gz)$/
-        )[1];
-        console.log(
-          `Based on the filename, assuming it is "${chalk.cyan(
-            assumedProjectName
-          )}"`
-        );
-        return Promise.resolve(assumedProjectName);
-      });
-  } else if (installPackage.indexOf('git+') === 0) {
-    // Pull package name out of git urls e.g:
-    // git+https://github.com/mycompany/react-scripts.git
-    // git+ssh://github.com/mycompany/react-scripts.git#v1.2.3
-    return Promise.resolve(installPackage.match(/([^/]+)\.git(#.*)?$/)[1]);
-  } else if (installPackage.match(/.+@/)) {
-    // Do not match @scope/ when stripping off @version or @tag
-    return Promise.resolve(
-      installPackage.charAt(0) + installPackage.substr(1).split('@')[0]
-    );
-  } else if (installPackage.match(/^file:/)) {
-    const installPackagePath = installPackage.match(/^file:(.*)?$/)[1];
-    const installPackageJson = require(path.join(
-      installPackagePath,
-      'package.json'
-    ));
-    return Promise.resolve(installPackageJson.name);
-  }
-  return Promise.resolve(installPackage);
-}
+// function getPackageName(installPackage) {
+//   if (installPackage.match(/^.+\.(tgz|tar\.gz)$/)) {
+//     return getTemporaryDirectory()
+//       .then(obj => {
+//         let stream;
+//         if (/^http/.test(installPackage)) {
+//           stream = hyperquest(installPackage);
+//         } else {
+//           stream = fs.createReadStream(installPackage);
+//         }
+//         return extractStream(stream, obj.tmpdir).then(() => obj);
+//       })
+//       .then(obj => {
+//         const packageName = require(path.join(obj.tmpdir, 'package.json')).name;
+//         obj.cleanup();
+//         return packageName;
+//       })
+//       .catch(err => {
+//         // The package name could be with or without semver version, e.g. react-scripts-0.2.0-alpha.1.tgz
+//         // However, this function returns package name only without semver version.
+//         console.log(
+//           `Could not extract the package name from the archive: ${err.message}`
+//         );
+//         const assumedProjectName = installPackage.match(
+//           /^.+\/(.+?)(?:-\d+.+)?\.(tgz|tar\.gz)$/
+//         )[1];
+//         console.log(
+//           `Based on the filename, assuming it is "${chalk.cyan(
+//             assumedProjectName
+//           )}"`
+//         );
+//         return Promise.resolve(assumedProjectName);
+//       });
+//   } else if (installPackage.indexOf('git+') === 0) {
+//     // Pull package name out of git urls e.g:
+//     // git+https://github.com/mycompany/react-scripts.git
+//     // git+ssh://github.com/mycompany/react-scripts.git#v1.2.3
+//     return Promise.resolve(installPackage.match(/([^/]+)\.git(#.*)?$/)[1]);
+//   } else if (installPackage.match(/.+@/)) {
+//     // Do not match @scope/ when stripping off @version or @tag
+//     return Promise.resolve(
+//       installPackage.charAt(0) + installPackage.substr(1).split('@')[0]
+//     );
+//   } else if (installPackage.match(/^file:/)) {
+//     const installPackagePath = installPackage.match(/^file:(.*)?$/)[1];
+//     const installPackageJson = require(path.join(
+//       installPackagePath,
+//       'package.json'
+//     ));
+//     return Promise.resolve(installPackageJson.name);
+//   }
+//   return Promise.resolve(installPackage);
+// }
 
 function checkNpmVersion() {
   let hasMinNpm = false;
@@ -584,31 +669,31 @@ function checkNpmVersion() {
   };
 }
 
-function checkNodeVersion(packageName) {
-  const packageJsonPath = path.resolve(
-    process.cwd(),
-    'node_modules',
-    packageName,
-    'package.json'
-  );
-  const packageJson = require(packageJsonPath);
-  if (!packageJson.engines || !packageJson.engines.node) {
-    return;
-  }
-
-  if (!semver.satisfies(process.version, packageJson.engines.node)) {
-    console.error(
-      chalk.red(
-        'You are running Node %s.\n' +
-          'Create React App requires Node %s or higher. \n' +
-          'Please update your version of Node.'
-      ),
-      process.version,
-      packageJson.engines.node
-    );
-    process.exit(1);
-  }
-}
+// function checkNodeVersion(packageName) {
+//   const packageJsonPath = path.resolve(
+//     process.cwd(),
+//     'node_modules',
+//     packageName,
+//     'package.json'
+//   );
+//   const packageJson = require(packageJsonPath);
+//   if (!packageJson.engines || !packageJson.engines.node) {
+//     return;
+//   }
+//
+//   if (!semver.satisfies(process.version, packageJson.engines.node)) {
+//     console.error(
+//       chalk.red(
+//         'You are running Node %s.\n' +
+//           'Create React App requires Node %s or higher. \n' +
+//           'Please update your version of Node.'
+//       ),
+//       process.version,
+//       packageJson.engines.node
+//     );
+//     process.exit(1);
+//   }
+// }
 
 function checkAppName(appName) {
   const validationResult = validateProjectName(appName);
@@ -624,8 +709,8 @@ function checkAppName(appName) {
   }
 
   // TODO: there should be a single place that holds the dependencies
-  const dependencies = ['react', 'react-dom', 'react-scripts'].sort();
-  if (dependencies.indexOf(appName) >= 0) {
+  const deps = [...dependencies, ...devDependencies].sort();
+  if (deps.indexOf(appName) >= 0) {
     console.error(
       chalk.red(
         `We cannot create a project called ${chalk.green(
@@ -633,7 +718,7 @@ function checkAppName(appName) {
         )} because a dependency with the same name exists.\n` +
           `Due to the way npm works, the following names are not allowed:\n\n`
       ) +
-        chalk.cyan(dependencies.map(depName => `  ${depName}`).join('\n')) +
+        chalk.cyan(deps.map(depName => `  ${depName}`).join('\n')) +
         chalk.red('\n\nPlease choose a different project name.')
     );
     process.exit(1);
@@ -661,27 +746,27 @@ function makeCaretRange(dependencies, name) {
 
   dependencies[name] = patchedVersion;
 }
-
-function setCaretRangeForRuntimeDeps(packageName) {
-  const packagePath = path.join(process.cwd(), 'package.json');
-  const packageJson = require(packagePath);
-
-  if (typeof packageJson.dependencies === 'undefined') {
-    console.error(chalk.red('Missing dependencies in package.json'));
-    process.exit(1);
-  }
-
-  const packageVersion = packageJson.dependencies[packageName];
-  if (typeof packageVersion === 'undefined') {
-    console.error(chalk.red(`Unable to find ${packageName} in package.json`));
-    process.exit(1);
-  }
-
-  makeCaretRange(packageJson.dependencies, 'react');
-  makeCaretRange(packageJson.dependencies, 'react-dom');
-
-  fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + os.EOL);
-}
+//
+// function setCaretRangeForRuntimeDeps(packageName) {
+//   const packagePath = path.join(process.cwd(), 'package.json');
+//   const packageJson = require(packagePath);
+//
+//   if (typeof packageJson.dependencies === 'undefined') {
+//     console.error(chalk.red('Missing dependencies in package.json'));
+//     process.exit(1);
+//   }
+//
+//   const packageVersion = packageJson.dependencies[packageName];
+//   if (typeof packageVersion === 'undefined') {
+//     console.error(chalk.red(`Unable to find ${packageName} in package.json`));
+//     process.exit(1);
+//   }
+//
+//   makeCaretRange(packageJson.dependencies, 'react');
+//   makeCaretRange(packageJson.dependencies, 'react-dom');
+//
+//   fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + os.EOL);
+// }
 
 // If project only contains files generated by GH, it’s safe.
 // Also, if project contains remnant error logs from a previous
@@ -844,4 +929,15 @@ function checkIfOnline(useYarn) {
       }
     });
   });
+}
+
+// unpackCore();
+
+function unpackCore() {
+  request(coreUrl).pipe(
+    unpack(process.cwd(), function(err) {
+      if (err) console.error(err.stack);
+      else console.log('done');
+    })
+  );
 }
