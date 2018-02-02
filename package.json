@@ -10,9 +10,9 @@
     "node": ">=4"
   },
   "bugs": {
-    "url": "https://github.com/facebook/ez-react-component/issues"
+    "url": "https://github.com/wuweiweiwu/ez-react-component/issues"
   },
-  "files": ["index.js", "createReactApp.js"],
+  "files": ["index.js", "createReactComponent.js"],
   "bin": {
     "ez-react-component": "./index.js"
   },
