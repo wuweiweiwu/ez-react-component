@@ -1,1 +1,1 @@
-# create-react-component
+# ez-react-component
