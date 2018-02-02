@@ -1,5 +1,7 @@
 # ez-react-component
 
+[![NPM](https://nodei.co/npm/ez-react-component.png)](https://nodei.co/npm/ez-react-component/)
+
 an opinionated CLI to bootstrap your React component development.
 
 Inspired by [fritz-c](https://github.com/fritz-c)'s setup for his projects. A lot of code was taken from [create-react-app](https://github.com/facebook/create-react-app)
