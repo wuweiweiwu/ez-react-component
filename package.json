@@ -1,9 +1,10 @@
 {
   "name": "ez-react-component",
-  "version": "0.0.1",
-  "keywords": ["react"],
-  "description":
-    "Create React component development environments with no build configuration.",
+  "version": "0.0.2",
+  "keywords": [
+    "react"
+  ],
+  "description": "Create React component development environments with no build configuration.",
   "repository": "wuweiweiwu/ez-react-component",
   "license": "MIT",
   "engines": {
@@ -12,7 +13,10 @@
   "bugs": {
     "url": "https://github.com/wuweiweiwu/ez-react-component/issues"
   },
-  "files": ["index.js", "createReactComponent.js"],
+  "files": [
+    "index.js",
+    "createReactComponent.js"
+  ],
   "bin": {
     "ez-react-component": "./index.js"
   },
